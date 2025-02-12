@@ -8,6 +8,8 @@ import java.io.IOException
 data class SignupRequest(val name: String, val password: String, val email: String, val phone_no: String)
 data class ResponseMessage(val message: String?, val error: String?)
 
+val BACK = "https://9f1bd91p-5000.inc1.devtunnels.ms/"
+
 fun signupUser(name: String, password: String, email: String, phoneNo: String) {
     val client = OkHttpClient()
     val gson = Gson()
@@ -21,10 +23,11 @@ fun signupUser(name: String, password: String, email: String, phoneNo: String) {
 
     // Create the POST request
     val request = Request.Builder()
-        .url("http://10.0.2.2:5000/signup") // Replace with your Flask server URL
+        .url("https://9f1bd91p-5000.inc1.devtunnels.ms/signup") // Replace with your Flask server URL
         .post(requestBody)
         .build()
 
+    // Make the HTTP call
     // Make the HTTP call
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {

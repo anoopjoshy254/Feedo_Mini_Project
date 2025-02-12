@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3) // Material3
+    implementation ("com.google.firebase:firebase-firestore:25.1.1")
 
     dependencies {
         implementation ("androidx.compose.ui:ui:1.5.0" )// Update to the latest version
