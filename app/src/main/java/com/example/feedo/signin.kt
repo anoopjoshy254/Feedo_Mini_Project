@@ -47,7 +47,8 @@ fun signinUser(email: String, password: String, loginError: MutableState<String>
             response.use {
                 if (!response.isSuccessful) {
                     println("Signin error: ${response.message}")
-                    loginError.value = response.message
+                    loginError.value = "Sign in failed"
+                    done.value = true
                     return
                 }
 

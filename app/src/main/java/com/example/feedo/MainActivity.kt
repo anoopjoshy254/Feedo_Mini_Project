@@ -1,5 +1,8 @@
 package com.example.feedo
+import AddScheduleScreen
+import FeedingHistoryScreen
 import ManualFeedingScreen
+import Schedule
 import ScheduledFeedingScreen
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,9 +13,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,9 +34,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.feedo.ui.theme.FeedoTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 
 class ManualFeedingActivity : ComponentActivity() {
@@ -77,13 +79,17 @@ class MainActivity : ComponentActivity() {
         setContent {
             FeedoTheme {
                 val navController = rememberNavController()
+                var schedules by remember { mutableStateOf(listOf<Schedule>()) }
+                val ctx = this
                 NavHost(navController = navController, startDestination = "home") {
                     composable("home") { FeedoScreen(navController) }
                     composable("login") { LoginScreen(navController) }
                     composable("sign_up") { SignUpScreen(navController) }
                     composable("sign_up_success") { SignUpSuccessScreen(navController) }
                     composable("manual_feeding") { ManualFeedingScreen(navController) }
-                    composable("scheduled_feeding") { ScheduledFeedingScreen(navController) }
+                    composable("scheduled_feeding") { ScheduledFeedingScreen(navController, ctx) }
+                    composable("add_schedule") { AddScheduleScreen(navController) {} }
+                    composable("feeding_history") { FeedingHistoryScreen(navController, schedules) }
                     composable("main_interface") { backStackEntry ->
 //
                         MainInterfaceScreen(navController)
@@ -93,6 +99,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun FeedingHistoryScreen(navController: NavHostController, schedules: List<Schedule>) {
+
     }
 }
 
@@ -202,15 +212,19 @@ fun LoginScreen(navController: NavHostController) {
         Button(
             onClick = {
                 val onSucess = mutableStateOf(false)
-                    if (email.value.isBlank() || password.value.isBlank()) {
-                        loginError.value = "All fields must be filled"
-                    } else if (!isValidEmail(email.value)) {
-                        loginError.value = "Invalid email format"
-                    } else {
-                        signinUser(email.value, password.value, loginError, onSucess)
-                        while (!onSucess.value) {};
+                if (email.value.isBlank() || password.value.isBlank()) {
+                    loginError.value = "All fields must be filled"
+                } else if (!isValidEmail(email.value)) {
+                    loginError.value = "Invalid email format"
+                } else {
+                    signinUser(email.value, password.value, loginError, onSucess)
+                    while (!onSucess.value) {};
+                    if (loginError.value == "") {
                         navController.navigate("main_interface")
+                    } else {
+                        loginError.value = "Invalid email or password"
                     }
+                }
 
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A90E2)),
@@ -487,7 +501,7 @@ fun MainFeaturesSection(navController: NavHostController) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             FeatureButton("Feeding History", painterResource(id = R.drawable.ic_history)) {
-                // Navigate or handle click
+                navController.navigate("feeding_history")
             }
             FeatureButton("Water PH Level", painterResource(id = R.drawable.ic_ph)) {
                 // Navigate or handle click
@@ -552,6 +566,7 @@ fun FoodLevelIndicator() {
         }
     }
 }
+
 
 @Composable
 fun NavigationBar(navController: NavHostController) {

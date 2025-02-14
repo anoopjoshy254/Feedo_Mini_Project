@@ -166,7 +166,7 @@ fun MainFeaturesSection(navController: NavHostController) {
         }
 
         Button(
-            onClick = { /* Navigate to Feeding History */ },
+            onClick = {  navController.navigate("FeedingHistoryScreen") },
             modifier = Modifier.fillMaxWidth().padding(8.dp),
             colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1E90FF))
         ) {
