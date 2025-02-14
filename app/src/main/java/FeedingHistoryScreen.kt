@@ -28,7 +28,7 @@ fun FeedingHistoryScreen(navController: NavHostController, schedules: List<Sched
 
     // Fetch schedules when the screen is loaded
     LaunchedEffect(Unit) {
-        schedules = fetchSchedules()
+        //schedules = fetchSchedules()
     }
 
     Column(

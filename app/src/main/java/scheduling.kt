@@ -15,6 +15,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.feedo.BACK
+import com.example.feedo.ResponseMessageA
+import com.example.feedo.ScheduleRequest
+import com.example.feedo.SigninRequest
+import com.example.feedo.mobile
+import com.example.feedo.name
+import com.google.gson.Gson
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -213,7 +228,36 @@ fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit) {
 //}
 
 fun sendToBackend(schedule: Schedule) {
-    println("Sending schedule to backend: $schedule")
+    val client = OkHttpClient()
+    val gson = Gson()
+
+    // Prepare the request body
+    val signinRequest = ScheduleRequest(
+        schedule.time,
+        schedule.weight,
+        userEmail = "athul@gmail.com"
+    )
+    val requestBody = gson.toJson(signinRequest)
+        .toRequestBody("application/json".toMediaTypeOrNull())
+
+    // Create the POST request
+    val request = Request.Builder()
+        .url("$BACK/save_schedule") // Replace with your Flask server URL
+        .post(requestBody)
+        .build()
+
+    // Make the HTTP call
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            println("Signin failed: ${e.message}")
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            response.use {
+                println("SENTBC")
+            }
+        }
+    })
 }
 
 data class Schedule(val id: String, val time: String, val weight: Int, val isEnabled: Boolean)
