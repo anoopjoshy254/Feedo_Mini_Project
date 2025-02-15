@@ -27,5 +27,6 @@
 
         <!-- Register the FeedingNotificationReceiver -->
         <receiver android:name=".FeedingNotificationReceiver" />
+        <receiver android:name=".PHNotificationReceiver" />
     </application>
 </manifest>

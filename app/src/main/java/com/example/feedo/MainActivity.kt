@@ -2,6 +2,7 @@ package com.example.feedo
 import AddScheduleScreen
 import FeedingHistoryScreen
 import ManualFeedingScreen
+import PHLevelScreen
 import Schedule
 import ScheduledFeedingScreen
 import android.os.Bundle
@@ -88,8 +89,10 @@ class MainActivity : ComponentActivity() {
                     composable("sign_up_success") { SignUpSuccessScreen(navController) }
                     composable("manual_feeding") { ManualFeedingScreen(navController) }
                     composable("scheduled_feeding") { ScheduledFeedingScreen(navController, ctx) }
+
                     composable("add_schedule") { AddScheduleScreen(navController) {} }
-                    composable("feeding_history") { FeedingHistoryScreen(navController, schedules) }
+                    composable("feeding_history") { FeedingHistoryScreen() }
+                    composable("ph_level") { PHLevelScreen(navController) }
                     composable("main_interface") { backStackEntry ->
 //
                         MainInterfaceScreen(navController)
@@ -99,10 +102,6 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-    }
-
-    private fun FeedingHistoryScreen(navController: NavHostController, schedules: List<Schedule>) {
-
     }
 }
 
@@ -504,7 +503,8 @@ fun MainFeaturesSection(navController: NavHostController) {
                 navController.navigate("feeding_history")
             }
             FeatureButton("Water PH Level", painterResource(id = R.drawable.ic_ph)) {
-                // Navigate or handle click
+                navController.navigate("ph_level")
+
             }
 
         }

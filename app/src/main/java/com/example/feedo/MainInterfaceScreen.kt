@@ -180,6 +180,13 @@ fun MainFeaturesSection(navController: NavHostController) {
         ) {
             Text("Water PH Level", color = Color.White)
         }
+        Button(
+            onClick = { navController.navigate("ph_level") },
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1E90FF))
+        ) {
+            Text("Water PH Level", color = Color.White)
+        }
     }
 }
 

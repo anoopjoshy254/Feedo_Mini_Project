@@ -3,9 +3,12 @@ import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,21 +18,41 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.feedo.BACK
+import com.example.feedo.ScheduleRequest
+import com.google.gson.Gson
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 @Composable
 fun ScheduledFeedingScreen(navController: NavHostController, context: Context) {
-    var schedules by remember { mutableStateOf(mutableListOf<Schedule>()) }
+    val schedules = remember { mutableStateListOf<Schedule>() } // Use mutableStateListOf
     var showDialog by remember { mutableStateOf(false) }
     var selectedSchedule by remember { mutableStateOf<Schedule?>(null) }
 
+    // Fetch schedules when the screen loads
+    LaunchedEffect(Unit) {
+        fetchSchedules { fetchedSchedules ->
+            schedules.clear()
+            schedules.addAll(fetchedSchedules)
+        }
+    }
+
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .background(Color.White)
             .padding(16.dp)
+            .padding(top = 32.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         // Top Bar
         Row(
@@ -43,6 +66,12 @@ fun ScheduledFeedingScreen(navController: NavHostController, context: Context) {
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
+            Button(onClick = {
+                selectedSchedule = null
+                showDialog = true
+            }) {
+                Text("+", color = Color.White, fontSize = 24.sp)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -50,10 +79,21 @@ fun ScheduledFeedingScreen(navController: NavHostController, context: Context) {
         // Schedule Cards
         schedules.sortBy { it.time }
         schedules.forEach { schedule ->
-            ScheduleCard(schedule = schedule, onEdit = {
-                selectedSchedule = schedule
-                showDialog = true
-            })
+            ScheduleCard(
+                schedule = schedule,
+                onEdit = {
+                    selectedSchedule = schedule
+                    showDialog = true
+                },
+                onDelete = {
+                    deleteSchedule(schedule.time) {
+                        // delete this entry from the list
+                        schedules.removeAll {
+                            it.time == schedule.time
+                        }
+                    }
+                }
+            )
             Spacer(modifier = Modifier.height(8.dp))
         }
 
@@ -62,12 +102,7 @@ fun ScheduledFeedingScreen(navController: NavHostController, context: Context) {
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.BottomCenter
         ) {
-            Button(onClick = {
-                selectedSchedule = null
-                showDialog = true
-            }) {
-                Text("+", color = Color.White, fontSize = 24.sp)
-            }
+
         }
     }
 
@@ -80,75 +115,10 @@ fun ScheduledFeedingScreen(navController: NavHostController, context: Context) {
     }
 }
 
-@Composable
-fun AddScheduleDialog(context: Context, schedule: Schedule?, onScheduleAdded: (Schedule) -> Unit) {
-    val calendar = Calendar.getInstance()
-    var selectedTime by remember { mutableStateOf(schedule?.time ?: SimpleDateFormat("HH:mm", Locale.getDefault()).format(calendar.time)) }
-    var weight by remember { mutableStateOf(schedule?.weight?.toString() ?: "") }
-    var autoTime by remember { mutableStateOf("") }
-    var isManualTime by remember { mutableStateOf(schedule != null) } // Track if manual time is set
-
-    fun calculateAutoTime(weight: Int): String {
-        val newTime = Calendar.getInstance().apply { add(Calendar.MINUTE, weight) }
-        return SimpleDateFormat("HH:mm", Locale.getDefault()).format(newTime.time)
-    }
-
-    AlertDialog(
-        onDismissRequest = {},
-        title = { Text("${if (schedule == null) "Set" else "Edit"} Feeding Schedule") },
-        text = {
-            Column {
-                Button(onClick = {
-                    TimePickerDialog(context, { _, hour, minute ->
-                        selectedTime = String.format("%02d:%02d", hour, minute)
-                        isManualTime = true // Mark that user set time manually
-                    }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true).show()
-                }) {
-                    Text("Select Time")
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                TextField(
-                    value = weight,
-                    onValueChange = {
-                        weight = it
-//                        autoTime = if (it.isNotEmpty()) calculateAutoTime(it.toInt()) else ""
-//                        if (!isManualTime) selectedTime = autoTime // Auto update if time wasn't manually set
-                    },
-                    label = { Text("Enter Weight (kg)") }
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Auto Time: $autoTime", fontSize = 14.sp, color = Color.Gray)
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                val finalTime = if (isManualTime) selectedTime else autoTime
-                val newSchedule = schedule?.copy(time = finalTime, weight = weight.toIntOrNull() ?: 0)
-                    ?: Schedule(UUID.randomUUID().toString(), finalTime, weight.toIntOrNull() ?: 0, true)
-                onScheduleAdded(newSchedule)
-                sendToBackend(newSchedule)
-            }) {
-                Text("Save")
-            }
-        }
-    )
-}
-
-fun secondToTime(seconds: Int): String {
-    val hours = seconds / 3600
-    val minutes = (seconds % 3600) / 60
-    val secs = seconds % 60
-    return String.format("%02d:%02d:%02d", hours, minutes, secs)
-}
-
 
 @Composable
-fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit) {
+fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit, onDelete: () -> Unit) {
     var isEnabled by remember { mutableStateOf(schedule.isEnabled) }
-//    val timeRemaining = calculateTimeRemaining(schedule.time)
 
     Card(
         modifier = Modifier
@@ -166,7 +136,7 @@ fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit) {
         ) {
             Column {
                 Text(
-                    text = "${schedule.time}",
+                    text = schedule.time,
                     fontSize = 16.sp,
                     color = Color.Black
                 )
@@ -176,7 +146,7 @@ fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit) {
                     color = Color.Gray
                 )
                 Text(
-                    text = "Valve Duration: ${secondToTime(schedule.weight*30)}", // Add valve duration here
+                    text = "Valve Duration: ${secondToTime(schedule.weight * 30)}",
                     fontSize = 14.sp,
                     color = Color.Gray
                 )
@@ -193,27 +163,170 @@ fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit) {
                 IconButton(onClick = onEdit) {
                     Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit")
                 }
+                IconButton(onClick = onDelete) {
+                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                }
             }
         }
     }
 }
 
-//fun calculateTimeRemaining(time: String): String {
-//    return try {
-//        val currentTime = Calendar.getInstance()
-//        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault())
-//        val targetTime = Calendar.getInstance().apply {
-//            time = formatter.parse(time) ?: return "Invalid Time"
-//        }
-//        val diff = targetTime.timeInMillis - currentTime.timeInMillis
-//        if (diff > 0) "in ${TimeUnit.MILLISECONDS.toMinutes(diff)} min" else "Passed"
-//    } catch (e: Exception) {
-//        "Invalid Time"
-//    }
-//}
+@Composable
+fun AddScheduleDialog(context: Context, schedule: Schedule?, onScheduleAdded: (Schedule) -> Unit) {
+    val calendar = Calendar.getInstance()
+    var selectedTime by remember {
+        mutableStateOf(
+            schedule?.time ?: SimpleDateFormat(
+                "HH:mm",
+                Locale.getDefault()
+            ).format(calendar.time)
+        )
+    }
+    var weight by remember { mutableStateOf(schedule?.weight?.toString() ?: "") }
+    var autoTime by remember { mutableStateOf("") }
+    var isManualTime by remember { mutableStateOf(schedule != null) }
 
-fun sendToBackend(schedule: Schedule) {
-    println("Sending schedule to backend: $schedule")
+    fun calculateAutoTime(weight: Int): String {
+        val newTime = Calendar.getInstance().apply { add(Calendar.MINUTE, weight) }
+        return SimpleDateFormat("HH:mm", Locale.getDefault()).format(newTime.time)
+    }
+
+    AlertDialog(
+        onDismissRequest = {},
+        title = { Text("${if (schedule == null) "Set" else "Edit"} Feeding Schedule") },
+        text = {
+            Column {
+                Button(onClick = {
+                    TimePickerDialog(
+                        context,
+                        { _, hour, minute ->
+                            selectedTime = String.format("%02d:%02d", hour, minute)
+                            isManualTime = true
+                        },
+                        calendar.get(Calendar.HOUR_OF_DAY),
+                        calendar.get(Calendar.MINUTE),
+                        true
+                    ).show()
+                }) {
+                    Text("Select Time")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                TextField(
+                    value = weight,
+                    onValueChange = {
+                        weight = it
+                    },
+                    label = { Text("Enter Weight (kg)") }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Auto Time: $autoTime", fontSize = 14.sp, color = Color.Gray)
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                val finalTime = if (isManualTime) selectedTime else autoTime
+                val newSchedule =
+                    schedule?.copy(time = finalTime, weight = weight.toIntOrNull() ?: 0)
+                        ?: Schedule(
+                            UUID.randomUUID().toString(),
+                            finalTime,
+                            weight.toIntOrNull() ?: 0,
+                            true
+                        )
+                onScheduleAdded(newSchedule)
+                sendToBackend(newSchedule)
+            }) {
+                Text("Save")
+            }
+        }
+    )
 }
 
+fun secondToTime(seconds: Int): String {
+    val hours = seconds / 3600
+    val minutes = (seconds % 3600) / 60
+    val secs = seconds % 60
+    return String.format("%02d:%02d:%02d", hours, minutes, secs)
+}
+
+fun sendToBackend(schedule: Schedule) {
+    val client = OkHttpClient()
+    val gson = Gson()
+
+    val requestBody =
+        gson.toJson(ScheduleRequest(schedule.time, schedule.weight, userEmail = "athul@gmail.com"))
+            .toRequestBody("application/json".toMediaTypeOrNull())
+
+    val request = Request.Builder()
+        .url("$BACK/save_schedule")
+        .post(requestBody)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            println("Signin failed: ${e.message}")
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            response.use {
+                println("SENTBC")
+            }
+        }
+    })
+}
+
+fun fetchSchedules(callback: (List<Schedule>) -> Unit) {
+    val client = OkHttpClient()
+    val requestBody = Gson().toJson(mapOf("user_email" to "athul@gmail.com"))
+        .toRequestBody("application/json".toMediaTypeOrNull())
+
+    val request = Request.Builder()
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/get_schedules")
+        .post(requestBody)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            e.printStackTrace()
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            response.body?.string()?.let { json ->
+                println("WWW $json")
+                val fetchedSchedules = Gson().fromJson(json, ScheduleResponse::class.java).schedules
+                callback(fetchedSchedules)
+            }
+        }
+    })
+}
+
+fun deleteSchedule(scheduleId: String, onSuccess: () -> Unit) {
+    val client = OkHttpClient()
+    val gson = Gson()
+
+    val requestBody = gson.toJson(mapOf("time" to scheduleId))
+        .toRequestBody("application/json".toMediaTypeOrNull())
+
+    val request = Request.Builder()
+        .url("${BACK}delete_schedule")
+        .post(requestBody)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            e.printStackTrace()
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            if (response.isSuccessful) {
+                onSuccess()
+            }
+        }
+    })
+}
+
+data class ScheduleResponse(val schedules: List<Schedule>)
 data class Schedule(val id: String, val time: String, val weight: Int, val isEnabled: Boolean)
