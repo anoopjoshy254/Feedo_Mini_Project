@@ -25,30 +25,16 @@ import java.util.*
 fun FeedingHistoryScreen() {
     // Store fetched data persistently
     var schedules by rememberSaveable { mutableStateOf<List<Scheduledata>>(emptyList()) }
-    val client = OkHttpClient()
 
-    // Function to fetch feeding history
-    fun fetchFeedingHistory() {
-        val request = Request.Builder()
-            .url("https://t25ppb8g-5000.inc1.devtunnels.ms/feeding-history") // Your Flask Server URL
-            .build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onResponse(call: Call, response: Response) {
-                if (response.isSuccessful) {
-                    response.body?.string()?.let { body ->
-                        schedules = Gson().fromJson(body, Array<Scheduledata>::class.java).toList()
-                    }
-                } else {
-                    Log.e("FeedingHistory", "Error fetching feeding history")
-                }
-            }
-
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("FeedingHistory", "Request failed: ${e.message}")
-            }
-        })
+    LaunchedEffect(Unit) {
+        fetchFeedingHistory{
+                fetchedSchedules ->
+            schedules = fetchedSchedules
+        }
     }
+    // Function to fetch feeding history
+
 
     Column(
         modifier = Modifier
@@ -83,16 +69,6 @@ fun FeedingHistoryScreen() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Fetch Button
-        Button(
-            onClick = { fetchFeedingHistory() },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(backgroundColor = Color.Blue)
-        ) {
-            Text(text = "Fetch Feeding History", color = Color.White)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         // Display Previously Fetched Data
         if (schedules.isEmpty()) {
@@ -161,6 +137,31 @@ fun FeedingHistoryCard(schedule: Scheduledata) {
             }
         }
     }
+}
+
+
+fun fetchFeedingHistory(callback: (List<Scheduledata>) -> Unit) {
+    val client = OkHttpClient()
+    val request = Request.Builder()
+        .url("https://t25ppb8g-5000.inc1.devtunnels.ms/feeding-history") // Your Flask Server URL
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onResponse(call: Call, response: Response) {
+            if (response.isSuccessful) {
+                response.body?.string()?.let { body ->
+                   val fetchedSchedules = Gson().fromJson(body, Array<Scheduledata>::class.java).toList()
+                    callback(fetchedSchedules)
+                }
+            } else {
+                Log.e("FeedingHistory", "Error fetching feeding history")
+            }
+        }
+
+        override fun onFailure(call: Call, e: IOException) {
+            Log.e("FeedingHistory", "Request failed: ${e.message}")
+        }
+    })
 }
 
 // Schedule Data Model (Updated)
