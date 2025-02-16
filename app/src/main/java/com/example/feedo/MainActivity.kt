@@ -37,6 +37,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.feedo.ui.theme.FeedoTheme
 
 
+
 class ManualFeedingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,7 +49,7 @@ class ManualFeedingActivity : ComponentActivity() {
     }
 }
 @Composable
-fun ManualFeedingScreenx(navController: NavHostController? = null) {
+fun ManualFeedingScreen(navController: NavHostController? = null) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

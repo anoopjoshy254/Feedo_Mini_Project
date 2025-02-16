@@ -15,6 +15,9 @@
         android:theme="@style/Theme.Feedo"
         android:networkSecurityConfig="@xml/network_security_config">
 
+
+
+
         <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
@@ -27,6 +30,6 @@
 
         <!-- Register the FeedingNotificationReceiver -->
         <receiver android:name=".FeedingNotificationReceiver" />
-        <receiver android:name=".PHNotificationReceiver" />
+        <receiver android:name=".PHNotificationReceiver" android:exported="false"/>
     </application>
 </manifest>

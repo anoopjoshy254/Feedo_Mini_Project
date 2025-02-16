@@ -154,7 +154,11 @@ fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit, onDelete: () -> Unit) {
             Row {
                 Switch(
                     checked = isEnabled,
-                    onCheckedChange = { isEnabled = it },
+                    onCheckedChange = { newValue ->
+                        isEnabled = newValue
+                        val updatedSchedule = schedule.copy(isEnabled = newValue)
+                        updateSchedule(updatedSchedule) // Send updated value to backend
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.Green,
                         uncheckedThumbColor = Color.Red
@@ -185,6 +189,7 @@ fun AddScheduleDialog(context: Context, schedule: Schedule?, onScheduleAdded: (S
     var weight by remember { mutableStateOf(schedule?.weight?.toString() ?: "") }
     var autoTime by remember { mutableStateOf("") }
     var isManualTime by remember { mutableStateOf(schedule != null) }
+
 
     fun calculateAutoTime(weight: Int): String {
         val newTime = Calendar.getInstance().apply { add(Calendar.MINUTE, weight) }
@@ -229,7 +234,7 @@ fun AddScheduleDialog(context: Context, schedule: Schedule?, onScheduleAdded: (S
             Button(onClick = {
                 val finalTime = if (isManualTime) selectedTime else autoTime
                 val newSchedule =
-                    schedule?.copy(time = finalTime, weight = weight.toIntOrNull() ?: 0)
+                    schedule?.copy(time = finalTime, weight = weight.toIntOrNull() ?: 0,isEnabled = true)
                         ?: Schedule(
                             UUID.randomUUID().toString(),
                             finalTime,
@@ -256,9 +261,14 @@ fun sendToBackend(schedule: Schedule) {
     val client = OkHttpClient()
     val gson = Gson()
 
-    val requestBody =
-        gson.toJson(ScheduleRequest(schedule.time, schedule.weight, userEmail = "athul@gmail.com"))
-            .toRequestBody("application/json".toMediaTypeOrNull())
+    val requestBody = gson.toJson(
+        mapOf(
+            "time" to schedule.time,
+            "weight" to schedule.weight,
+            "isEnabled" to schedule.isEnabled,
+            "user_email" to "athul@gmail.com"
+        )
+    ).toRequestBody("application/json".toMediaTypeOrNull())
 
     val request = Request.Builder()
         .url("$BACK/save_schedule")
@@ -267,16 +277,21 @@ fun sendToBackend(schedule: Schedule) {
 
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
-            println("Signin failed: ${e.message}")
+            println("Failed to send schedule: ${e.message}")
         }
 
         override fun onResponse(call: Call, response: Response) {
             response.use {
-                println("SENTBC")
+                if (response.isSuccessful) {
+                    println("Schedule saved successfully")
+                } else {
+                    println("Failed to save schedule: ${response.message}")
+                }
             }
         }
     })
 }
+
 
 fun fetchSchedules(callback: (List<Schedule>) -> Unit) {
     val client = OkHttpClient()
@@ -284,7 +299,7 @@ fun fetchSchedules(callback: (List<Schedule>) -> Unit) {
         .toRequestBody("application/json".toMediaTypeOrNull())
 
     val request = Request.Builder()
-        .url("https://f43jd2nv-5000.asse.devtunnels.ms/get_schedules")
+        .url("https://t25ppb8g-5000.inc1.devtunnels.ms/get_schedules")
         .post(requestBody)
         .build()
 
@@ -327,6 +342,41 @@ fun deleteSchedule(scheduleId: String, onSuccess: () -> Unit) {
         }
     })
 }
+
+fun updateSchedule(schedule: Schedule) {
+    val client = OkHttpClient()
+    val gson = Gson()
+
+    val requestBody = gson.toJson(
+        mapOf(
+            "id" to schedule.id,  // Ensure ID is sent to find and update the correct document
+            "time" to schedule.time,
+            "weight" to schedule.weight,
+            "isEnabled" to schedule.isEnabled,
+            "user_email" to "athul@gmail.com"
+        )
+    ).toRequestBody("application/json".toMediaTypeOrNull())
+
+    println("Updating Schedule: $requestBody") // Debugging
+
+    val request = Request.Builder()
+        .url("$BACK/update_schedule") // Use an update endpoint instead of save_schedule
+        .put(requestBody) // Use PUT for updates
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            println("Failed to update schedule: ${e.message}")
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            response.use {
+                println("Schedule updated successfully: ${response.message}")
+            }
+        }
+    })
+}
+
 
 data class ScheduleResponse(val schedules: List<Schedule>)
 data class Schedule(val id: String, val time: String, val weight: Int, val isEnabled: Boolean)

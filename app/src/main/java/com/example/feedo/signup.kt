@@ -8,7 +8,7 @@ import java.io.IOException
 data class SignupRequest(val name: String, val password: String, val email: String, val phone_no: String)
 data class ResponseMessage(val message: String?, val error: String?)
 
-val BACK = "https://f43jd2nv-5000.asse.devtunnels.ms/"
+val BACK = "https://t25ppb8g-5000.inc1.devtunnels.ms/"
 
 fun signupUser(name: String, password: String, email: String, phoneNo: String) {
     val client = OkHttpClient()
@@ -23,7 +23,7 @@ fun signupUser(name: String, password: String, email: String, phoneNo: String) {
 
     // Create the POST request
     val request = Request.Builder()
-        .url("https://9f1bd91p-5000.inc1.devtunnels.ms/signup") // Replace with your Flask server URL
+        .url("https://t25ppb8g-5000.inc1.devtunnels.ms/signup") // Replace with your Flask server URL
         .post(requestBody)
         .build()
 

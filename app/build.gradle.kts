@@ -80,7 +80,7 @@ dependencies {
         implementation ("androidx.compose.foundation:foundation:1.5.0")
     }
 
-
+    implementation ("com.squareup.okhttp3:okhttp:4.9.3")
     // Navigation
     implementation(libs.androidx.navigation.compose)
 

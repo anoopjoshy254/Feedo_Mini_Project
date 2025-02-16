@@ -22,6 +22,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import android.util.Log
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import java.io.IOException
 
 
 // The rest of your code remains unchanged
@@ -166,7 +173,9 @@ fun MainFeaturesSection(navController: NavHostController) {
         }
 
         Button(
-            onClick = {  navController.navigate("FeedingHistoryScreen") },
+            onClick = {
+
+                navController.navigate("FeedingHistoryScreen") },
             modifier = Modifier.fillMaxWidth().padding(8.dp),
             colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1E90FF))
         ) {
@@ -190,62 +199,83 @@ fun MainFeaturesSection(navController: NavHostController) {
     }
 }
 
+private fun sendCommandToServer(url: String) {
+    val client = OkHttpClient()
+    val request = Request.Builder()
+        .url(url)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Log.e("API_ERROR", "Failed to connect: ${e.message}")
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            Log.d("API_RESPONSE", "Response: ${response.body?.string()}")
+        }
+    })
+}
 
 @Composable
-fun ManualFeedingScreen(navController: NavHostController? = null) {
-    var isTimerRunning by remember { mutableStateOf(false) }
-    var timeElapsed by remember { mutableStateOf(0) }
-    val coroutineScope = rememberCoroutineScope()
-    var timerJob by remember { mutableStateOf<Job?>(null) }
+        fun ManualFeedingScreen(navController: NavHostController? = null) {
+            var isTimerRunning by remember { mutableStateOf(false) }
+            var timeElapsed by remember { mutableStateOf(0) }
+            val WeightFed = timeElapsed/30
+            val coroutineScope = rememberCoroutineScope()
+            var timerJob by remember { mutableStateOf<Job?>(null) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Manual Feeding Control", style = MaterialTheme.typography.h5, color = Color.Black)
-        Spacer(modifier = Modifier.height(20.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(text = "Manual Feeding Control", style = MaterialTheme.typography.h5, color = Color.Black)
+                Spacer(modifier = Modifier.height(20.dp))
 
-        Text(text = "Time Elapsed: $timeElapsed sec", style = MaterialTheme.typography.h6, color = Color.Black)
-        Spacer(modifier = Modifier.height(20.dp))
+                Text(text = "Time Elapsed: $timeElapsed sec", style = MaterialTheme.typography.h6, color = Color.Black)
+                Spacer(modifier = Modifier.height(20.dp))
 
-        // Start Button
-        Button(
-            onClick = {
-                if (!isTimerRunning) {
-                    isTimerRunning = true
-                    timerJob = coroutineScope.launch {
-                        while (true) {
-                            delay(1000)
-                            timeElapsed += 1
+                Text(text = "Total Weight Fed : $WeightFed kg", style = MaterialTheme.typography.h6, color = Color.Black)
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Start Button
+                Button(
+                    onClick = {
+                        if (!isTimerRunning) {
+                            isTimerRunning = true
+                            timerJob = coroutineScope.launch {
+                                sendCommandToServer("https://t25ppb8g-5000.inc1.devtunnels.ms/start_feeding") // Call backend
+                                while (true) {
+                                    delay(1000)
+                                    timeElapsed += 1
+                                }
+                            }
                         }
-                    }
+                    },
+                    colors = ButtonDefaults.buttonColors(Color.Green),
+                    enabled = !isTimerRunning
+                ) {
+                    Text(text = "Start Feeding")
                 }
-            },
-            colors = ButtonDefaults.buttonColors(Color.Green),
-            enabled = !isTimerRunning // Disable if already running
-        ) {
-            Text(text = "Start Feeding")
-        }
 
-        Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                    onClick = {
+                        isTimerRunning = false
+                        timerJob?.cancel()
+                        timeElapsed = 0
+                        sendCommandToServer("https://t25ppb8g-5000.inc1.devtunnels.ms/stop_feeding") // Call backend
+                    },
+                    colors = ButtonDefaults.buttonColors(Color.Red),
+                    enabled = isTimerRunning
+                ) {
+                    Text(text = "Stop Feeding")
+                }
 
-        // Stop Button
-        Button(
-            onClick = {
-                isTimerRunning = false
-                timerJob?.cancel()
-                timeElapsed = 0 // Reset timer
-            },
-            colors = ButtonDefaults.buttonColors(Color.Red),
-            enabled = isTimerRunning // Disable if already stopped
-        ) {
-            Text(text = "Stop Feeding")
-        }
+                Spacer(modifier = Modifier.height(20.dp))
 
-        Spacer(modifier = Modifier.height(20.dp))
+
 
         // Back Button
         Button(onClick = {
