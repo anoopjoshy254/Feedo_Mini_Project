@@ -154,7 +154,10 @@ fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit, onDelete: () -> Unit) {
             Row {
                 Switch(
                     checked = isEnabled,
-                    onCheckedChange = { isEnabled = it },
+                    onCheckedChange = { newStatus ->
+                        isEnabled = newStatus
+                        updateScheduleStatus(schedule.id, newStatus)
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.Green,
                         uncheckedThumbColor = Color.Red
@@ -170,6 +173,32 @@ fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit, onDelete: () -> Unit) {
         }
     }
 }
+
+fun updateScheduleStatus(scheduleId: String, isEnabled: Boolean) {
+    val client = OkHttpClient()
+    val gson = Gson()
+
+    val requestBody = gson.toJson(mapOf("id" to scheduleId, "is_enabled" to isEnabled))
+        .toRequestBody("application/json".toMediaTypeOrNull())
+
+    val request = Request.Builder()
+        .url("${BACK}update_schedule_status")
+        .post(requestBody)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            e.printStackTrace()
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            if (response.isSuccessful) {
+                println("Schedule status updated successfully")
+            }
+        }
+    })
+}
+
 
 @Composable
 fun AddScheduleDialog(context: Context, schedule: Schedule?, onScheduleAdded: (Schedule) -> Unit) {
@@ -329,4 +358,10 @@ fun deleteSchedule(scheduleId: String, onSuccess: () -> Unit) {
 }
 
 data class ScheduleResponse(val schedules: List<Schedule>)
-data class Schedule(val id: String, val time: String, val weight: Int, val isEnabled: Boolean)
+data class Schedule(
+    val id: String,
+    val time: String,
+    val weight: Int,
+    val isEnabled: Boolean,
+    val duration: Int = 0 // Default duration
+)

@@ -61,7 +61,7 @@ dependencies {
     implementation (libs.rybalkinsd.kohttp)
         implementation(libs.retrofit)
         implementation(libs.converter.gson)
-
+    implementation (libs.androidx.work.runtime.ktx)
 
 
 
@@ -83,6 +83,7 @@ dependencies {
 
     // Navigation
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.appcompat)
 
     // Testing Libraries
     testImplementation(libs.junit)
