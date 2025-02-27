@@ -1,5 +1,6 @@
 import android.app.TimePickerDialog
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,8 @@ import androidx.navigation.NavHostController
 import com.example.feedo.BACK
 import com.example.feedo.ScheduleRequest
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -33,16 +36,19 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
-fun ScheduledFeedingScreen(navController: NavHostController, context: Context) {
+fun ScheduledFeedingScreen(navController: NavHostController, context: Context, pondName: String) {
+    Log.d("ScheduledFeedingScreen", "Pond Name: $pondName") // Log the pondName
     val schedules = remember { mutableStateListOf<Schedule>() } // Use mutableStateListOf
     var showDialog by remember { mutableStateOf(false) }
     var selectedSchedule by remember { mutableStateOf<Schedule?>(null) }
 
     // Fetch schedules when the screen loads
-    LaunchedEffect(Unit) {
-        fetchSchedules { fetchedSchedules ->
-            schedules.clear()
-            schedules.addAll(fetchedSchedules)
+    LaunchedEffect(pondName) {
+        withContext(Dispatchers.IO) {
+            fetchSchedules(pondName) { fetchedSchedules ->
+                schedules.clear()
+                schedules.addAll(fetchedSchedules)
+            }
         }
     }
 
@@ -107,14 +113,13 @@ fun ScheduledFeedingScreen(navController: NavHostController, context: Context) {
     }
 
     if (showDialog) {
-        AddScheduleDialog(context, selectedSchedule) { schedule ->
+        AddScheduleDialog(context, selectedSchedule, pondName) { schedule ->
             schedules.removeAll { it.id == schedule.id }
             schedules.add(schedule)
             showDialog = false
         }
     }
 }
-
 
 @Composable
 fun ScheduleCard(schedule: Schedule, onEdit: () -> Unit, onDelete: () -> Unit) {
@@ -202,7 +207,7 @@ fun updateScheduleStatus(scheduleId: String, isEnabled: Boolean) {
 
 
 @Composable
-fun AddScheduleDialog(context: Context, schedule: Schedule?, onScheduleAdded: (Schedule) -> Unit) {
+fun AddScheduleDialog(context: Context, schedule: Schedule?, pondName: String, onScheduleAdded: (Schedule) -> Unit) {
     val calendar = Calendar.getInstance()
     var selectedTime by remember {
         mutableStateOf(
@@ -268,7 +273,7 @@ fun AddScheduleDialog(context: Context, schedule: Schedule?, onScheduleAdded: (S
                             true
                         )
                 onScheduleAdded(newSchedule)
-                sendToBackend(newSchedule)
+                sendToBackend(newSchedule, pondName)
             }) {
                 Text("Save")
             }
@@ -283,7 +288,7 @@ fun secondToTime(seconds: Int): String {
     return String.format("%02d:%02d:%02d", hours, minutes, secs)
 }
 
-fun sendToBackend(schedule: Schedule) {
+fun sendToBackend(schedule: Schedule, pondName: String) {
     val client = OkHttpClient()
     val gson = Gson()
 
@@ -292,7 +297,8 @@ fun sendToBackend(schedule: Schedule) {
             "time" to schedule.time,
             "weight" to schedule.weight,
             "isEnabled" to schedule.isEnabled,
-            "user_email" to "athul@gmail.com"
+            "user_email" to "athul@gmail.com",
+            "pond_name" to pondName  // Include pond_name in the request
         )
     ).toRequestBody("application/json".toMediaTypeOrNull())
 
@@ -319,24 +325,22 @@ fun sendToBackend(schedule: Schedule) {
 }
 
 
-fun fetchSchedules(callback: (List<Schedule>) -> Unit) {
+fun fetchSchedules(pondName: String, callback: (List<Schedule>) -> Unit) {
     val client = OkHttpClient()
-    val requestBody = Gson().toJson(mapOf("user_email" to "athul@gmail.com"))
-        .toRequestBody("application/json".toMediaTypeOrNull())
 
     val request = Request.Builder()
-        .url("https://t25ppb8g-5000.inc1.devtunnels.ms/get_schedules")
-        .post(requestBody)
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/get_schedules/$pondName")
         .build()
 
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
+            Log.e("fetchSchedules", "Failed to fetch schedules: ${e.message}") // Log the error
             e.printStackTrace()
         }
 
         override fun onResponse(call: Call, response: Response) {
             response.body?.string()?.let { json ->
-                println("WWW $json")
+                Log.d("fetchSchedules", "Fetched schedules: $json") // Log the fetched schedules
                 val fetchedSchedules = Gson().fromJson(json, ScheduleResponse::class.java).schedules
                 callback(fetchedSchedules)
             }

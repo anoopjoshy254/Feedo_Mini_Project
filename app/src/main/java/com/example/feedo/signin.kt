@@ -20,7 +20,7 @@ data class SigninRequest(val email: String, val password: String)
 val name = mutableStateOf("")
 val mobile = mutableStateOf("")
 
-fun signinUser(email: String, password: String, loginError: MutableState<String>, done: MutableState<Boolean>) {
+fun signinUserBackend(email: String, password: String, loginError: MutableState<String>, onSuccess: MutableState<Boolean>) {
     val client = OkHttpClient()
     val gson = Gson()
 
@@ -31,7 +31,7 @@ fun signinUser(email: String, password: String, loginError: MutableState<String>
 
     // Create the POST request
     val request = Request.Builder()
-        .url("https://t25ppb8g-5000.inc1.devtunnels.ms/signin") // Replace with your Flask server URL
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/signin") // Replace with your Flask server URL
         .post(requestBody)
         .build()
 
@@ -39,26 +39,40 @@ fun signinUser(email: String, password: String, loginError: MutableState<String>
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
             // Handle network error
+
+
             loginError.value = e.message.toString()
             println("Signin failed: ${e.message}")
         }
 
         override fun onResponse(call: Call, response: Response) {
             response.use {
+
+                println(response)
+                println(response.message)
                 if (!response.isSuccessful) {
                     println("Signin error: ${response.message}")
                     loginError.value = "Sign in failed"
-                    done.value = true
+                    onSuccess.value = true
                     return
                 }
 
+//                if (response.isSuccessful){
+//                    loginError.value = "signin sucess"
+//                    println(response.message)
+                //    onSuccess.value = true
+//                    return
+//                }
 
                 // Parse the response
                 val responseMessage = gson.fromJson(response.body?.string(), ResponseMessageA::class.java)
                 println("Signin response: ${responseMessage.message ?: responseMessage.error}")
                 name.value = responseMessage.name.toString()
                 mobile.value = responseMessage.mobile.toString()
-                done.value = true
+                onSuccess.value = true
+
+                println("onsucess value -> ${onSuccess.value}")
+              //return
             }
         }
     })

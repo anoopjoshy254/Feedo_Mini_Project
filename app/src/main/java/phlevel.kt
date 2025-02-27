@@ -19,6 +19,8 @@ import androidx.navigation.NavHostController
 import com.example.feedo.R
 import kotlinx.coroutines.delay
 import kotlin.random.Random
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -31,17 +33,19 @@ fun PHLevelScreen(navController: NavHostController) {
     LaunchedEffect(Unit) {
         while (true) {
             delay(15000) // ✅ 15 seconds delay
-            phLevel = Random.nextDouble(4.0, 12.0)
-            status = when {
-                phLevel < 6.5 -> {
-                    sendPHNotification(context, "PH Level Alert", "Your water PH level is LOW! ⚠️")
-                    "Your water PH level is LOW! ⚠️"
+            withContext(Dispatchers.IO) {
+                phLevel = Random.nextDouble(4.0, 12.0)
+                status = when {
+                    phLevel < 6.5 -> {
+                        sendPHNotification(context, "PH Level Alert", "Your water PH level is LOW! ⚠️")
+                        "Your water PH level is LOW! ⚠️"
+                    }
+                    phLevel > 9.0 -> {
+                        sendPHNotification(context, "PH Level Alert", "Your water PH level is HIGH! ⚠️")
+                        "Your water PH level is HIGH! ⚠️"
+                    }
+                    else -> "Your PH range is optimal ✅"
                 }
-                phLevel > 9.0 -> {
-                    sendPHNotification(context, "PH Level Alert", "Your water PH level is HIGH! ⚠️")
-                    "Your water PH level is HIGH! ⚠️"
-                }
-                else -> "Your PH range is optimal ✅"
             }
         }
     }

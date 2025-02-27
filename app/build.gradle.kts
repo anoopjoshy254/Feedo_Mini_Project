@@ -62,6 +62,18 @@ dependencies {
         implementation(libs.retrofit)
         implementation(libs.converter.gson)
     implementation (libs.androidx.work.runtime.ktx)
+    dependencies {
+        implementation(libs.androidx.core.ktx.v1120)
+        implementation(libs.androidx.lifecycle.runtime.ktx.v262)
+        implementation(libs.androidx.activity.compose.v182)
+        implementation(libs.androidx.lifecycle.viewmodel.compose) // For ViewModel
+        implementation(libs.androidx.runtime.livedata) // For StateFlow
+
+        // Retrofit for API calls
+        implementation(libs.retrofit)
+        implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    }
+
 
 
 
@@ -84,6 +96,8 @@ dependencies {
     // Navigation
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.appcompat)
+    implementation(libs.firebase.crashlytics.buildtools)
+    implementation(libs.volley)
 
     // Testing Libraries
     testImplementation(libs.junit)

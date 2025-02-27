@@ -1,4 +1,3 @@
-
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -16,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.*
 import java.io.IOException
 import java.text.SimpleDateFormat
@@ -28,9 +29,10 @@ fun FeedingHistoryScreen() {
 
 
     LaunchedEffect(Unit) {
-        fetchFeedingHistory{
-                fetchedSchedules ->
-            schedules = fetchedSchedules
+        withContext(Dispatchers.IO) {
+            fetchFeedingHistory { fetchedSchedules ->
+                schedules = fetchedSchedules
+            }
         }
     }
     // Function to fetch feeding history
@@ -143,7 +145,7 @@ fun FeedingHistoryCard(schedule: Scheduledata) {
 fun fetchFeedingHistory(callback: (List<Scheduledata>) -> Unit) {
     val client = OkHttpClient()
     val request = Request.Builder()
-        .url("https://t25ppb8g-5000.inc1.devtunnels.ms/feeding-history") // Your Flask Server URL
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/feeding-history") // Your Flask Server URL
         .build()
 
     client.newCall(request).enqueue(object : Callback {

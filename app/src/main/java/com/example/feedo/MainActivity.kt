@@ -1,20 +1,26 @@
 package com.example.feedo
+
 import AddScheduleScreen
 import FeedingHistoryScreen
 import ManualFeedingScreen
 import PHLevelScreen
 import Schedule
 import ScheduledFeedingScreen
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.appcompat.app.AppCompatActivity
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,8 +46,15 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
-
-
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
+import com.google.gson.Gson
+import java.io.IOException
+import kotlin.math.log
 
 class ManualFeedingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,10 +66,13 @@ class ManualFeedingActivity : ComponentActivity() {
         }
     }
 }
+
 @Composable
 fun ManualFeedingScreen(navController: NavHostController? = null) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -72,45 +88,47 @@ fun ManualFeedingScreen(navController: NavHostController? = null) {
     }
 }
 
-
-
-// Data class to store user details
 data class User(val email: String, val password: String)
 
-// List to store multiple users' data
 private val usersList = mutableListOf<User>()
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             FeedoTheme {
                 val navController = rememberNavController()
-                var schedules by remember { mutableStateOf(listOf<Schedule>()) }
-                val ctx = this
                 NavHost(navController = navController, startDestination = "home") {
                     composable("home") { FeedoScreen(navController) }
                     composable("login") { LoginScreen(navController) }
                     composable("sign_up") { SignUpScreen(navController) }
                     composable("sign_up_success") { SignUpSuccessScreen(navController) }
-                    composable("manual_feeding") { ManualFeedingScreen(navController) }
-                    composable("scheduled_feeding") { ScheduledFeedingScreen(navController, ctx) }
-
-                    composable("add_schedule") { AddScheduleScreen(navController) {} }
+                    // Change manual feeding route to show pond list for manual feeding
+                    composable("pond_list_for_manual_feeding") { PondListForManualFeedingScreen(navController) }
+                    // New route: Manual feeding screen accepts a pond parameter.
+                    composable("manual_feeding/{pondId}") { backStackEntry ->
+                        val pondId = backStackEntry.arguments?.getString("pondId") ?: ""
+                        ManualFeedingScreen(navController, pondId)
+                    }
+                    composable("scheduled_feeding") { PondListForSchedulesScreen(navController) }
                     composable("feeding_history") { FeedingHistoryScreen() }
                     composable("ph_level") { PHLevelScreen(navController) }
-                    composable("main_interface") { backStackEntry ->
-//
-                        MainInterfaceScreen(navController)
-
+                    composable("main_interface") { MainInterfaceScreen(navController) }
+                    composable("add_pond") { AddPondScreen(navController) }
+                    composable("scheduling/{pondId}") { backStackEntry ->
+                        val pondId = backStackEntry.arguments?.getString("pondId") ?: ""
+                        ScheduledFeedingScreen(
+                            navController,
+                            context = this@MainActivity,
+                            pondName = pondId
+                        )
                     }
-
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun FeedoScreen(navController: NavHostController) {
@@ -164,12 +182,6 @@ fun LoginScreen(navController: NavHostController) {
     val password = remember { mutableStateOf("") }
     val loginError = remember { mutableStateOf("") }
 
-    val coroutineScope = rememberCoroutineScope()
-
-//    if (name.value != "") {
-//        navController.navigate("home")
-//    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -194,7 +206,6 @@ fun LoginScreen(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             textStyle = TextStyle(color = Color.Black)
-
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -214,23 +225,18 @@ fun LoginScreen(navController: NavHostController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        val onSuccess = remember { mutableStateOf(false) }
         Button(
             onClick = {
-                val onSucess = mutableStateOf(false)
                 if (email.value.isBlank() || password.value.isBlank()) {
                     loginError.value = "All fields must be filled"
                 } else if (!isValidEmail(email.value)) {
                     loginError.value = "Invalid email format"
+                } else if (!isValidEmail(email.value)) {
+                    loginError.value = "Invalid email format"
                 } else {
-                    signinUser(email.value, password.value, loginError, onSucess)
-                    while (!onSucess.value) {};
-                    if (loginError.value == "") {
-                        navController.navigate("main_interface")
-                    } else {
-                        loginError.value = "Invalid email or password"
-                    }
+                    signinUserBackend(email.value, password.value, loginError, onSuccess)
                 }
-
             },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A90E2)),
             modifier = Modifier
@@ -239,6 +245,13 @@ fun LoginScreen(navController: NavHostController) {
             shape = RoundedCornerShape(25.dp)
         ) {
             Text(text = "Login", color = Color.White, fontSize = 16.sp)
+        }
+        LaunchedEffect(onSuccess.value) {
+            if (onSuccess.value) {
+                navController.navigate("main_interface")
+            } else if (loginError.value.isNotEmpty()) {
+                loginError.value = "Invalid email or password"
+            }
         }
     }
 }
@@ -337,14 +350,48 @@ fun SignUpScreen(navController: NavHostController) {
     }
 }
 
-// Function to validate email format
 fun isValidEmail(email: String): Boolean {
     return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
 }
 
-// Function to validate password
 fun isValidPassword(password: String): Boolean {
     return password.length >= 6
+}
+
+fun signinUser(
+    email: String,
+    password: String,
+    loginError: MutableState<String>,
+    onSuccess: MutableState<Boolean>
+) {
+    val client = OkHttpClient()
+    val gson = Gson()
+
+    val requestBody = gson.toJson(mapOf("email" to email, "password" to password))
+        .toRequestBody("application/json".toMediaTypeOrNull())
+
+    val request = Request.Builder()
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/signin")
+        .post(requestBody)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            e.printStackTrace()
+            loginError.value =
+                "Unable to resolve host. Please check your internet connection and try again."
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+                val user = gson.fromJson(responseBody, User::class.java)
+                onSuccess.value = true
+            } else {
+                loginError.value = "Invalid email or password"
+            }
+        }
+    })
 }
 
 @Composable
@@ -379,42 +426,52 @@ fun SignUpSuccessScreen(navController: NavHostController) {
 }
 
 @Composable
-fun MainInterfaceScreen(
-    navController: NavHostController,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        // Top Section: User Profile and System Overview
-        TopSection(userName = name.value, phoneNumber = mobile.value )
+fun MainInterfaceScreen(navController: NavHostController) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Existing UI remains unchanged inside this Column
+        BoxWithConstraints {
+            val screenWidth = maxWidth
+            val screenHeight = maxHeight
 
-        Spacer(modifier = Modifier.height(40.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .padding(16.dp)
+            ) {
+                TopSection(userName = name.value, phoneNumber = mobile.value)
 
-        // Main Section: Icons for Features
-        MainFeaturesSection(navController)
+                Spacer(modifier = Modifier.height(40.dp))
 
+                MainFeaturesSection(navController)
 
-        Spacer(modifier = Modifier.height(60.dp))
+                Spacer(modifier = Modifier.height(60.dp))
 
-        // Bottom Section: Food Level Indicator
-        FoodLevelIndicator()
+                FoodLevelIndicator()
 
-        Spacer(modifier = Modifier.height(90.dp))
+                Spacer(modifier = Modifier.height(90.dp))
 
-        // Navigation Bar
-        // Navigation Bar
-        NavigationBar(navController)
-
+                NavigationBar(navController)
+            }
+        }
+        // Floating Action Button in bottom-end corner
+        FloatingActionButton(
+            onClick = { navController.navigate("add_pond") },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Add Pond"
+            )
+        }
     }
 }
 
 @Composable
 fun TopSection(userName: String, phoneNumber: String) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        // User Details
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -440,7 +497,6 @@ fun TopSection(userName: String, phoneNumber: String) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // System Overview
         androidx.compose.material.Card(
             modifier = Modifier.fillMaxWidth(),
             backgroundColor = Color(0xFFEAF6FF),
@@ -487,17 +543,12 @@ fun MainFeaturesSection(navController: NavHostController) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             FeatureButton("Scheduled Feeding", painterResource(id = R.drawable.ic_clock)) {
-                // Navigate or handle click
+                // Navigate to pond list for schedules screen instead of directly to scheduled_feeding
                 navController.navigate("scheduled_feeding")
             }
-            // FeatureButton("Manual Feeding", painterResource(id = R.drawable.ic_manual)) {
-            //     navController.navigate("manual_feeding")
-            //  }
             FeatureButton("Manual Feeding", painterResource(id = R.drawable.ic_manual)) {
-                navController.navigate("manual_feeding")
+                navController.navigate("pond_list_for_manual_feeding")
             }
-
-
         }
     }
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -510,15 +561,14 @@ fun MainFeaturesSection(navController: NavHostController) {
             }
             FeatureButton("Water PH Level", painterResource(id = R.drawable.ic_ph)) {
                 navController.navigate("ph_level")
-
             }
-
         }
     }
 }
+
 @Composable
 fun FeatureButton(name: String, icon: Painter, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally,modifier = Modifier.padding(25.dp)) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(25.dp)) {
         Button(
             onClick = onClick,
             modifier = Modifier.size(80.dp),
@@ -536,7 +586,6 @@ fun FeatureButton(name: String, icon: Painter, onClick: () -> Unit) {
         androidx.compose.material.Text(name, fontSize = 18.sp, color = Color.Black)
     }
 }
-
 
 @Composable
 fun FoodLevelIndicator() {
@@ -557,7 +606,7 @@ fun FoodLevelIndicator() {
             Box(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(150.dp) // Adjust based on the food level (e.g., 15kg)
+                    .width(150.dp)
                     .background(Color.DarkGray, shape = RoundedCornerShape(10.dp))
             )
         }
@@ -573,13 +622,12 @@ fun FoodLevelIndicator() {
     }
 }
 
-
 @Composable
 fun NavigationBar(navController: NavHostController) {
     androidx.compose.material.BottomAppBar(backgroundColor = Color.Black) {
         androidx.compose.material.IconButton(
             onClick = { navController.navigate("home") },
-            modifier = Modifier.weight(1f) // Equal weight for alignment
+            modifier = Modifier.weight(1f)
         ) {
             androidx.compose.material.Icon(
                 painter = painterResource(id = R.drawable.ic_home),
@@ -589,7 +637,7 @@ fun NavigationBar(navController: NavHostController) {
         }
         androidx.compose.material.IconButton(
             onClick = { /* Navigate to Notifications */ },
-            modifier = Modifier.weight(1f) // Equal weight for alignment
+            modifier = Modifier.weight(1f)
         ) {
             androidx.compose.material.Icon(
                 painter = painterResource(id = R.drawable.ic_bell),
@@ -599,7 +647,7 @@ fun NavigationBar(navController: NavHostController) {
         }
         androidx.compose.material.IconButton(
             onClick = { /* Navigate to Contact */ },
-            modifier = Modifier.weight(1f) // Equal weight for alignment
+            modifier = Modifier.weight(1f)
         ) {
             androidx.compose.material.Icon(
                 painter = painterResource(id = R.drawable.ic_call),
