@@ -1,10 +1,8 @@
 package com.example.feedo
 
-import AddScheduleScreen
 import FeedingHistoryScreen
 import ManualFeedingScreen
 import PHLevelScreen
-import Schedule
 import ScheduledFeedingScreen
 import android.os.Build
 import android.os.Bundle
@@ -21,11 +19,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,20 +37,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.feedo.ui.theme.FeedoTheme
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
-import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import com.google.gson.Gson
 import java.io.IOException
-import kotlin.math.log
-import com.example.feedo.PondListForCompletedSchedulesScreen   // Added import for PondListForCompletedSchedulesScreen
 
 class ManualFeedingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,6 +127,13 @@ class MainActivity : ComponentActivity() {
                         val pondId = backStackEntry.arguments?.getString("pondId") ?: ""
                         CompletedSchedulesScreen(navController, pondId)
                     }
+                    composable("pond_list_for_food_level") {
+                        PondListForFoodLevelScreen(navController)
+                    }
+                    composable("food_level/{pondId}") { backStackEntry ->
+                        val pondId = backStackEntry.arguments?.getString("pondId") ?: ""
+                        FoodLevelScreen(navController, pondId)
+                    }
                 }
             }
         }
@@ -196,6 +189,8 @@ fun FeedoScreen(navController: NavHostController) {
             ) {
                 Text(text = "Sign Up", color = Color.Black, fontSize = 16.sp)
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -472,11 +467,9 @@ fun MainInterfaceScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(60.dp))
 
-                FoodLevelIndicator()
-
                 Spacer(modifier = Modifier.height(90.dp))
 
-                NavigationBar(navController)
+                
             }
         }
         FloatingActionButton(
@@ -588,6 +581,14 @@ fun MainFeaturesSection(navController: NavHostController) {
                 navController.navigate("pond_list_for_ph")
             }
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            FeatureButton("Food Level", painterResource(id = R.drawable.ic_ph)) {
+                navController.navigate("pond_list_for_food_level")
+            }
+        }
     }
 }
 
@@ -612,73 +613,4 @@ fun FeatureButton(name: String, icon: Painter, onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun FoodLevelIndicator() {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        androidx.compose.material.Text(
-            "Food Level",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-        Spacer(modifier = Modifier.height(20.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(19.dp)
-                .background(Color.LightGray, shape = RoundedCornerShape(8.dp))
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(150.dp)
-                    .background(Color.DarkGray, shape = RoundedCornerShape(10.dp))
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            androidx.compose.material.Text("0kg", fontSize = 12.sp, color = Color.Black)
-            androidx.compose.material.Text("15kg", fontSize = 12.sp, color = Color.Black)
-            androidx.compose.material.Text("30kg", fontSize = 12.sp, color = Color.Black)
-        }
-    }
-}
 
-@Composable
-fun NavigationBar(navController: NavHostController) {
-    androidx.compose.material.BottomAppBar(backgroundColor = Color.Black) {
-        androidx.compose.material.IconButton(
-            onClick = { navController.navigate("home") },
-            modifier = Modifier.weight(1f)
-        ) {
-            androidx.compose.material.Icon(
-                painter = painterResource(id = R.drawable.ic_home),
-                contentDescription = "Home",
-                tint = Color.White
-            )
-        }
-        androidx.compose.material.IconButton(
-            onClick = { /* Navigate to Notifications */ },
-            modifier = Modifier.weight(1f)
-        ) {
-            androidx.compose.material.Icon(
-                painter = painterResource(id = R.drawable.ic_bell),
-                contentDescription = "Notifications",
-                tint = Color.White
-            )
-        }
-        androidx.compose.material.IconButton(
-            onClick = { /* Navigate to Contact */ },
-            modifier = Modifier.weight(1f)
-        ) {
-            androidx.compose.material.Icon(
-                painter = painterResource(id = R.drawable.ic_call),
-                contentDescription = "Phone",
-                tint = Color.White
-            )
-        }
-    }
-}
