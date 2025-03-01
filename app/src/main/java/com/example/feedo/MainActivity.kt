@@ -55,6 +55,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import com.google.gson.Gson
 import java.io.IOException
 import kotlin.math.log
+import com.example.feedo.PondListForCompletedSchedulesScreen   // Added import for PondListForCompletedSchedulesScreen
 
 class ManualFeedingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,16 +114,32 @@ class MainActivity : ComponentActivity() {
                     }
                     composable("scheduled_feeding") { PondListForSchedulesScreen(navController) }
                     composable("feeding_history") { FeedingHistoryScreen() }
-                    composable("ph_level") { PHLevelScreen(navController) }
+                    // Replace the previous "ph_level" route with a two-step flow:
+                    composable("pond_list_for_ph") {
+                        // New Pond List for PH Level selection
+                        PondListForPHScreen(navController)
+                    }
+                    composable("ph_level/{pondId}") { backStackEntry ->
+                        val pondId = backStackEntry.arguments?.getString("pondId")
+                        PHLevelScreen(navController, pondId)
+                    }
                     composable("main_interface") { MainInterfaceScreen(navController) }
                     composable("add_pond") { AddPondScreen(navController) }
-                    composable("scheduling/{pondId}") { backStackEntry ->
-                        val pondId = backStackEntry.arguments?.getString("pondId") ?: ""
+                    composable("scheduling/{pondName}") { backStackEntry ->
+                        // Extract the actual pond name
+                        val pondName = backStackEntry.arguments?.getString("pondName") ?: ""
                         ScheduledFeedingScreen(
                             navController,
                             context = this@MainActivity,
-                            pondName = pondId
+                            pondName = pondName
                         )
+                    }
+                    composable("pond_list_for_completed_schedules") {
+                        PondListForCompletedSchedulesScreen(navController)
+                    }
+                    composable("completed_schedules/{pondId}") { backStackEntry ->
+                        val pondId = backStackEntry.arguments?.getString("pondId") ?: ""
+                        CompletedSchedulesScreen(navController, pondId)
                     }
                 }
             }
@@ -132,46 +149,53 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun FeedoScreen(navController: NavHostController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "FEEDO",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Black,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Button(
-            onClick = { navController.navigate("login") },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A90E2)),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(25.dp)
-        ) {
-            Text(text = "Login with Mail", color = Color.White, fontSize = 16.sp)
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val dynamicPadding = when {
+            maxWidth < 360.dp -> 8.dp
+            maxWidth < 600.dp -> 16.dp
+            else -> 24.dp
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = { navController.navigate("sign_up") },
-            colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(25.dp),
-            border = BorderStroke(1.dp, Color.Black)
+                .fillMaxSize()
+                .padding(dynamicPadding),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(text = "Sign Up", color = Color.Black, fontSize = 16.sp)
+            Text(
+                text = "FEEDO",
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = { navController.navigate("login") },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A90E2)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(25.dp)
+            ) {
+                Text(text = "Login with Mail", color = Color.White, fontSize = 16.sp)
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { navController.navigate("sign_up") },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(25.dp),
+                border = BorderStroke(1.dp, Color.Black)
+            ) {
+                Text(text = "Sign Up", color = Color.Black, fontSize = 16.sp)
+            }
         }
     }
 }
@@ -428,16 +452,17 @@ fun SignUpSuccessScreen(navController: NavHostController) {
 @Composable
 fun MainInterfaceScreen(navController: NavHostController) {
     Box(modifier = Modifier.fillMaxSize()) {
-        // Existing UI remains unchanged inside this Column
         BoxWithConstraints {
-            val screenWidth = maxWidth
-            val screenHeight = maxHeight
-
+            val dynamicPadding = when {
+                maxWidth < 360.dp -> 8.dp
+                maxWidth < 600.dp -> 16.dp
+                else -> 24.dp
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.White)
-                    .padding(16.dp)
+                    .padding(dynamicPadding)
             ) {
                 TopSection(userName = name.value, phoneNumber = mobile.value)
 
@@ -454,7 +479,6 @@ fun MainInterfaceScreen(navController: NavHostController) {
                 NavigationBar(navController)
             }
         }
-        // Floating Action Button in bottom-end corner
         FloatingActionButton(
             onClick = { navController.navigate("add_pond") },
             modifier = Modifier
@@ -543,7 +567,6 @@ fun MainFeaturesSection(navController: NavHostController) {
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             FeatureButton("Scheduled Feeding", painterResource(id = R.drawable.ic_clock)) {
-                // Navigate to pond list for schedules screen instead of directly to scheduled_feeding
                 navController.navigate("scheduled_feeding")
             }
             FeatureButton("Manual Feeding", painterResource(id = R.drawable.ic_manual)) {
@@ -556,11 +579,13 @@ fun MainFeaturesSection(navController: NavHostController) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
+            // Change Feeding History button to navigate to the new pond list for completed schedules.
             FeatureButton("Feeding History", painterResource(id = R.drawable.ic_history)) {
-                navController.navigate("feeding_history")
+                navController.navigate("pond_list_for_completed_schedules")
             }
             FeatureButton("Water PH Level", painterResource(id = R.drawable.ic_ph)) {
-                navController.navigate("ph_level")
+                // Navigate first to pond list for PH selection
+                navController.navigate("pond_list_for_ph")
             }
         }
     }

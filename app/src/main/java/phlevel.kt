@@ -24,15 +24,28 @@ import kotlinx.coroutines.withContext
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun PHLevelScreen(navController: NavHostController) {
+fun PHLevelScreen(navController: NavHostController, pondId: String?) {
     var phLevel by remember { mutableStateOf(7.0) }
     var status by remember { mutableStateOf("Your PH range is optimal") }
-    val context = LocalContext.current  // ✅ Correct way to get context
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+
+    // Optional: display which pond's PH is being shown.
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+        if (pondId != null) {
+            Text(
+                text = "PH Level for Pond: $pondId",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
-            delay(15000) // ✅ 15 seconds delay
+            delay(15000) // 15 seconds delay
             withContext(Dispatchers.IO) {
                 phLevel = Random.nextDouble(4.0, 12.0)
                 status = when {
@@ -82,7 +95,6 @@ fun sendPHNotification(context: Context, title: String, message: String) {
     val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     val channelId = "ph_level_channel"
 
-    // Ensure the channel is created (Android 8+)
     val channel = NotificationChannel(
         channelId,
         "PH Level Notifications",
@@ -93,10 +105,10 @@ fun sendPHNotification(context: Context, title: String, message: String) {
     }
     notificationManager.createNotificationChannel(channel)
 
-    val notificationId = System.currentTimeMillis().toInt()  // Unique ID for each notification
+    val notificationId = System.currentTimeMillis().toInt()
 
     val notification = NotificationCompat.Builder(context, channelId)
-        .setSmallIcon(R.drawable.ic_ph) // Ensure this drawable exists
+        .setSmallIcon(R.drawable.ic_ph)
         .setContentTitle(title)
         .setContentText(message)
         .setPriority(NotificationCompat.PRIORITY_HIGH)
