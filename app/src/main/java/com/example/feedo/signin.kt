@@ -19,6 +19,7 @@ data class ResponseMessageA(val message: String?, val error: String?, val name: 
 data class SigninRequest(val email: String, val password: String)
 val name = mutableStateOf("")
 val mobile = mutableStateOf("")
+val emailStr = mutableStateOf("")
 
 fun signinUserBackend(email: String, password: String, loginError: MutableState<String>, onSuccess: MutableState<Boolean>) {
     val client = OkHttpClient()
@@ -69,6 +70,7 @@ fun signinUserBackend(email: String, password: String, loginError: MutableState<
                 println("Signin response: ${responseMessage.message ?: responseMessage.error}")
                 name.value = responseMessage.name.toString()
                 mobile.value = responseMessage.mobile.toString()
+                emailStr.value = email
                 onSuccess.value = true
 
                 println("onsucess value -> ${onSuccess.value}")

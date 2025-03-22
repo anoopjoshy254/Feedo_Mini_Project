@@ -469,7 +469,7 @@ fun MainInterfaceScreen(navController: NavHostController) {
 
                 Spacer(modifier = Modifier.height(90.dp))
 
-                
+
             }
         }
         FloatingActionButton(
@@ -514,41 +514,7 @@ fun TopSection(userName: String, phoneNumber: String) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        androidx.compose.material.Card(
-            modifier = Modifier.fillMaxWidth(),
-            backgroundColor = Color(0xFFEAF6FF),
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    androidx.compose.material.Text(
-                        "Your Systems:",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                    androidx.compose.material.Text(
-                        "Model No:13323",
-                        fontSize = 16.sp,
-                        color = Color.Gray
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    androidx.compose.material.Text(
-                        "System Count:1",
-                        fontSize = 16.sp,
-                        color = Color.Black
-                    )
-                    androidx.compose.material.TextButton(onClick = { /* Know more */ }) {
-                        androidx.compose.material.Text("Know More", color = Color.Blue)
-                    }
-                }
-            }
-        }
+
     }
 }
 

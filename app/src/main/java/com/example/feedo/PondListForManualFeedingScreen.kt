@@ -74,7 +74,7 @@ fun PondListForManualFeedingScreen(navController: NavHostController) {
 fun fetchPonds(callback: (List<Pond>) -> Unit) {
     val client = OkHttpClient()
     val request = Request.Builder()
-        .url("https://f43jd2nv-5000.asse.devtunnels.ms/get_ponds")
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/get_ponds?mail=${emailStr.value}")
         .build()
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {

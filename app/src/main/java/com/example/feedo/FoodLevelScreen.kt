@@ -89,7 +89,7 @@ fun FoodLevelScreen(navController: NavHostController, pondId: String) {
 fun fetchTotalWeightFed(pondId: String, callback: (Int) -> Unit) {
     val client = OkHttpClient()
     val request = Request.Builder()
-        .url("https://f43jd2nv-5000.asse.devtunnels.ms/feeding-history") // Replace with your actual backend URL
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/feeding-history?mail=${emailStr.value}") // Replace with your actual backend URL
         .build()
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
@@ -110,7 +110,7 @@ fun updateFoodLevel(pondId: String, foodLevel: Int, callback: (Boolean) -> Unit)
     val mediaType = "application/json".toMediaTypeOrNull()
     val body = RequestBody.create(mediaType, "{ \"pond_name\": \"$pondId\", \"food_level\": $foodLevel }")
     val request = Request.Builder()
-        .url("https://f43jd2nv-5000.asse.devtunnels.ms/update_food_level") // Replace with your actual backend URL
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/update_food_level?mail=${emailStr.value}") // Replace with your actual backend URL
         .post(body)
         .build()
 

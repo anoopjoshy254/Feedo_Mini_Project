@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.feedo.emailStr
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -145,7 +146,7 @@ fun FeedingHistoryCard(schedule: Scheduledata) {
 fun fetchFeedingHistory(callback: (List<Scheduledata>) -> Unit) {
     val client = OkHttpClient()
     val request = Request.Builder()
-        .url("https://f43jd2nv-5000.asse.devtunnels.ms/feeding-history") // Your Flask Server URL
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/feeding-history?mail=${emailStr.value}") // Your Flask Server URL
         .build()
 
     client.newCall(request).enqueue(object : Callback {

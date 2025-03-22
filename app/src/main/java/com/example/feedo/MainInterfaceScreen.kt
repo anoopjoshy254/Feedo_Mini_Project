@@ -1,7 +1,7 @@
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.* // Import material3 components
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment // Correct import for Alignment
 import androidx.compose.ui.Modifier
@@ -31,7 +31,6 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import java.io.IOException
-import androidx.compose.ui.text.style.TextAlign
 
 
 // The rest of your code remains unchanged
@@ -46,33 +45,31 @@ fun MainInterfaceScreen(navController: NavHostController) {
     val user by viewModel.user.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
-        BoxWithConstraints {
-            val dynamicPadding = when {
-                maxWidth < 360.dp -> 8.dp
-                maxWidth < 600.dp -> 16.dp
-                else -> 24.dp
-            }
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.White)
-                    .padding(dynamicPadding)
-            ) {
-                TopSection(userName = user.name, phoneNumber = user.phoneNumber)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(16.dp)
+        ) {
+            // Top Section: Fetch User Details from Database
+            TopSection(userName = user.name, phoneNumber = user.phoneNumber)
 
-                Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                MainFeaturesSection(navController = navController)  // Pass navController here
+            // Main Section: Icons for Features
+            MainFeaturesSection(navController = navController)  // Pass navController here
 
-                Spacer(modifier = Modifier.height(60.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                FoodLevelButton(navController) // ADD FoodLevelButton here
+            // Bottom Section: Food Level Indicator
+            FoodLevelIndicator()
 
-                Spacer(modifier = Modifier.height(90.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                NavigationBar(navController = navController)
-            }
+            // Pass navController here
+            NavigationBar(navController = navController)
         }
+
         FloatingActionButton(
             onClick = { navController.navigate("add_pond") },
             modifier = Modifier
@@ -136,7 +133,7 @@ fun TopSection(userName: String, phoneNumber: String) {
             }
             Button(
                 onClick = { /* Report a complaint */ },
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                colors = ButtonDefaults.buttonColors(backgroundColor = Color.Red),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text("Report a complaint!", color = Color.White)
@@ -148,7 +145,7 @@ fun TopSection(userName: String, phoneNumber: String) {
         // System Overview
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF6FF)),
+            backgroundColor = Color(0xFFEAF6FF),
             shape = RoundedCornerShape(8.dp)
         ) {
             Row(
@@ -178,7 +175,7 @@ fun MainFeaturesSection(navController: NavHostController) {
         Button(
             onClick = { /* Navigate to Scheduled Feeding */ },
             modifier = Modifier.fillMaxWidth().padding(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E90FF))
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1E90FF))
         ) {
             Text("Scheduled Feeding", color = Color.White)
         }
@@ -186,7 +183,7 @@ fun MainFeaturesSection(navController: NavHostController) {
         Button(
             onClick = { navController.navigate("manual_feeding") },
             modifier = Modifier.fillMaxWidth().padding(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E90FF))
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1E90FF))
         ) {
             Text("Manual Feeding", color = Color.White)
         }
@@ -196,7 +193,7 @@ fun MainFeaturesSection(navController: NavHostController) {
 
                 navController.navigate("FeedingHistoryScreen") },
             modifier = Modifier.fillMaxWidth().padding(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E90FF))
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1E90FF))
         ) {
             Text("Feeding History", color = Color.White)
         }
@@ -204,27 +201,16 @@ fun MainFeaturesSection(navController: NavHostController) {
         Button(
             onClick = { /* Navigate to Water PH Level */ },
             modifier = Modifier.fillMaxWidth().padding(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E90FF))
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1E90FF))
         ) {
             Text("Water PH Level", color = Color.White)
         }
         Button(
             onClick = { navController.navigate("ph_level") },
             modifier = Modifier.fillMaxWidth().padding(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E90FF))
+            colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1E90FF))
         ) {
             Text("Water PH Level", color = Color.White)
-        }
-
-        // ADD Food Level Button here
-        Button(
-            onClick = { navController.navigate("pond_list_for_food_level") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E90FF))
-        ) {
-            Text("Food Level", color = Color.White)
         }
     }
 }
@@ -262,26 +248,13 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Manual Feeding Control for Pond: $pondId",
-            style = MaterialTheme.typography.headlineSmall, // Use headlineSmall
-            color = Color.Black,
-            textAlign = TextAlign.Center
-        )
+        Text(text = "Manual Feeding Control for Pond: $pondId", style = MaterialTheme.typography.h5, color = Color.Black)
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text(
-            text = "Time Elapsed: $timeElapsed sec",
-            style = MaterialTheme.typography.titleMedium, // Use titleMedium
-            color = Color.Black
-        )
+        Text(text = "Time Elapsed: $timeElapsed sec", style = MaterialTheme.typography.h6, color = Color.Black)
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text(
-            text = "Total Weight Fed : $WeightFed kg",
-            style = MaterialTheme.typography.titleMedium, // Use titleMedium
-            color = Color.Black
-        )
+        Text(text = "Total Weight Fed : $WeightFed kg", style = MaterialTheme.typography.h6, color = Color.Black)
         Spacer(modifier = Modifier.height(20.dp))
 
         // Start Button
@@ -298,7 +271,7 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
                     }
                 }
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Green),
+            colors = ButtonDefaults.buttonColors(Color.Green),
             enabled = !isTimerRunning
         ) {
             Text(text = "Start Feeding")
@@ -311,7 +284,7 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
                 timeElapsed = 0
                 sendCommandToServer("https://f43jd2nv-5000.asse.devtunnels.ms/stop_feeding") // Call backend
             },
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+            colors = ButtonDefaults.buttonColors(Color.Red),
             enabled = isTimerRunning
         ) {
             Text(text = "Stop Feeding")
@@ -364,7 +337,7 @@ fun FoodLevelIndicator() {
 
 @Composable
 fun NavigationBar(navController: NavHostController) {
-    BottomAppBar(containerColor = Color.Black) {
+    BottomAppBar(backgroundColor = Color.Black) {
         // Home Button (Start)
         IconButton(
             onClick = { navController.navigate("home") },
@@ -406,19 +379,5 @@ fun NavigationBar(navController: NavHostController) {
                 tint = Color.White
             )
         }
-    }
-}
-
-@Composable
-fun FoodLevelButton(navController: NavHostController) {
-    Button(
-        onClick = { navController.navigate("pond_list_for_food_level") },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
-        shape = RoundedCornerShape(25.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A90E2)) // Use ButtonDefaults from material3
-    ) {
-        Text(text = "Food Level", color = Color.White, fontSize = 16.sp)
     }
 }

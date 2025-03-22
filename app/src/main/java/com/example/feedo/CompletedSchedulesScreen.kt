@@ -88,7 +88,7 @@ fun ScheduleCard(schedule: CompletedSchedule) {
 fun fetchCompletedSchedules(callback: (List<CompletedSchedule>) -> Unit) {
     val client = OkHttpClient()
     val request = Request.Builder()
-        .url("https://f43jd2nv-5000.asse.devtunnels.ms/feeding-history")
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/feeding-history?mail=${emailStr.value}")
         .build()
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {

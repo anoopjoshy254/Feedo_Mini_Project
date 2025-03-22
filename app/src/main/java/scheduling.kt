@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.feedo.BACK
 import com.example.feedo.ScheduleRequest
+import com.example.feedo.emailStr
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -297,7 +298,7 @@ fun sendToBackend(schedule: Schedule, pondName: String) {
             "time" to schedule.time,
             "weight" to schedule.weight,
             "isEnabled" to schedule.isEnabled,
-            "user_email" to "athul@gmail.com",
+            "user_email" to emailStr.value,
             "pond_name" to pondName  // Include pond_name in the request
         )
     ).toRequestBody("application/json".toMediaTypeOrNull())
@@ -383,7 +384,7 @@ fun updateSchedule(schedule: Schedule) {
             "time" to schedule.time,
             "weight" to schedule.weight,
             "isEnabled" to schedule.isEnabled,
-            "user_email" to "athul@gmail.com"
+            "user_email" to emailStr.value
         )
     ).toRequestBody("application/json".toMediaTypeOrNull())
 
