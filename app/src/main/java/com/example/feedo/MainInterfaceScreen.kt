@@ -234,10 +234,9 @@ private fun sendCommandToServer(url: String) {
 
 @Composable
 fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String) {
-    // Now you can use pondId to identify which pond feeding is triggered.
     var isTimerRunning by remember { mutableStateOf(false) }
     var timeElapsed by remember { mutableStateOf(0) }
-    val WeightFed = timeElapsed/30
+    val weightFed = timeElapsed / 30f // Ensure floating-point division
     val coroutineScope = rememberCoroutineScope()
     var timerJob by remember { mutableStateOf<Job?>(null) }
 
@@ -251,10 +250,10 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
         Text(text = "Manual Feeding Control for Pond: $pondId", style = MaterialTheme.typography.h5, color = Color.Black)
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text(text = "Time Elapsed: $timeElapsed sec", style = MaterialTheme.typography.h6, color = Color.Black)
+        Text(text = "Time Elapsed: %.1f sec".format(timeElapsed.toFloat()), style = MaterialTheme.typography.h6, color = Color.Black)
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text(text = "Total Weight Fed : $WeightFed kg", style = MaterialTheme.typography.h6, color = Color.Black)
+        Text(text = "Total Weight Fed: %.2f kg".format(weightFed), style = MaterialTheme.typography.h6, color = Color.Black)
         Spacer(modifier = Modifier.height(20.dp))
 
         // Start Button
@@ -263,7 +262,7 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
                 if (!isTimerRunning) {
                     isTimerRunning = true
                     timerJob = coroutineScope.launch {
-                        sendCommandToServer("https://f43jd2nv-5000.asse.devtunnels.ms//start_feeding") // Call backend
+                        sendCommandToServer("https://f43jd2nv-5000.asse.devtunnels.ms/start_feeding") // Call backend
                         while (true) {
                             delay(1000)
                             timeElapsed += 1
@@ -292,8 +291,6 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
 
         Spacer(modifier = Modifier.height(20.dp))
 
-
-
         // Back Button
         Button(onClick = {
             navController?.navigate("main_interface?userName=b&phoneNumber=1234567890") {
@@ -304,6 +301,7 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
         }
     }
 }
+
 
 @Composable
 fun FoodLevelIndicator() {

@@ -35,6 +35,8 @@ import okhttp3.Response
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.feedo.NotificationHelper
+import kotlinx.coroutines.*
 
 @Composable
 fun ScheduledFeedingScreen(navController: NavHostController, context: Context, pondName: String) {
@@ -274,7 +276,7 @@ fun AddScheduleDialog(context: Context, schedule: Schedule?, pondName: String, o
                             true
                         )
                 onScheduleAdded(newSchedule)
-                sendToBackend(newSchedule, pondName)
+                sendToBackend(newSchedule, pondName, context)
             }) {
                 Text("Save")
             }
@@ -289,7 +291,7 @@ fun secondToTime(seconds: Int): String {
     return String.format("%02d:%02d:%02d", hours, minutes, secs)
 }
 
-fun sendToBackend(schedule: Schedule, pondName: String) {
+fun sendToBackend(schedule: Schedule, pondName: String, context: Context) {
     val client = OkHttpClient()
     val gson = Gson()
 
@@ -317,6 +319,40 @@ fun sendToBackend(schedule: Schedule, pondName: String) {
             response.use {
                 if (response.isSuccessful) {
                     println("Schedule saved successfully")
+                    // Schedule notifications for feeding start and end
+                    try {
+                        val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+                        val now = Calendar.getInstance()
+                        val scheduledTime = sdf.parse(schedule.time)
+                        val calendarScheduled = Calendar.getInstance().apply {
+                            time = scheduledTime
+                            set(Calendar.YEAR, now.get(Calendar.YEAR))
+                            set(Calendar.MONTH, now.get(Calendar.MONTH))
+                            set(Calendar.DAY_OF_MONTH, now.get(Calendar.DAY_OF_MONTH))
+                        }
+                        var delayMillis = calendarScheduled.timeInMillis - now.timeInMillis
+                        if (delayMillis < 0) {
+                            delayMillis += 24 * 60 * 60 * 1000 // schedule for next day if already passed
+                        }
+                        // Launch a background thread to wait and then send notifications
+                        Thread {
+                            Thread.sleep(delayMillis)
+                            NotificationHelper.sendNotification(
+                                context,
+                                "Feeding Started",
+                                "Your feeding has started for pond $pondName"
+                            )
+                            val durationMillis = schedule.weight * 30 * 1000L
+                            Thread.sleep(durationMillis)
+                            NotificationHelper.sendNotification(
+                                context,
+                                "Feeding Ended",
+                                "Your feeding has ended for pond $pondName"
+                            )
+                        }.start()
+                    } catch (e: Exception) {
+                        println("Notification scheduling failed: ${e.message}")
+                    }
                 } else {
                     println("Failed to save schedule: ${response.message}")
                 }
@@ -324,7 +360,6 @@ fun sendToBackend(schedule: Schedule, pondName: String) {
         }
     })
 }
-
 
 fun fetchSchedules(pondName: String, callback: (List<Schedule>) -> Unit) {
     val client = OkHttpClient()
