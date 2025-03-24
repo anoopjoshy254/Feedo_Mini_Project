@@ -1,3 +1,5 @@
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,9 +29,9 @@ import okhttp3.OkHttpClient
 import android.util.Log
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.platform.LocalContext
 import okhttp3.*
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody // Add this import
 import java.io.IOException
 
 
@@ -276,12 +278,22 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
             Text(text = "Start Feeding")
         }
 
+        val context = LocalContext.current
+
         Button(
             onClick = {
                 isTimerRunning = false
                 timerJob?.cancel()
+                sendCommandToServer("https://f43jd2nv-5000.asse.devtunnels.ms/stop_feeding")
+
+                // Send manual feeding data to the backend
+                coroutineScope.launch {
+                    sendManualFeedingData(pondId, weightFed, timeElapsed) {
+                        //
+                    }
+                }
+
                 timeElapsed = 0
-                sendCommandToServer("https://f43jd2nv-5000.asse.devtunnels.ms/stop_feeding") // Call backend
             },
             colors = ButtonDefaults.buttonColors(Color.Red),
             enabled = isTimerRunning
@@ -291,7 +303,7 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Back Button
+// Back Button
         Button(onClick = {
             navController?.navigate("main_interface?userName=b&phoneNumber=1234567890") {
                 popUpTo("main_interface") { inclusive = true }
@@ -299,9 +311,38 @@ fun ManualFeedingScreen(navController: NavHostController? = null, pondId: String
         }) {
             Text("Back to Home")
         }
+
     }
 }
 
+private fun sendManualFeedingData(pondId: String, weightFed: Float, timeElapsed: Int, onComplete: () -> Unit) {
+    val client = OkHttpClient()
+    val mediaType = "application/json".toMediaTypeOrNull()
+    val body = """
+        {
+            "pond_name": "$pondId",
+            "weight_fed": ${weightFed.toInt()},
+            "time_elapsed": $timeElapsed
+        }
+    """.trimIndent().toRequestBody(mediaType)
+
+    val request = Request.Builder()
+        .url("https://f43jd2nv-5000.asse.devtunnels.ms/manual_feeding")
+        .post(body)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            e.printStackTrace()
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            if (response.isSuccessful) {
+                onComplete()
+            }
+        }
+    })
+}
 
 @Composable
 fun FoodLevelIndicator() {

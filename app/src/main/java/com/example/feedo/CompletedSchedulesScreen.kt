@@ -25,7 +25,8 @@ data class CompletedSchedule(
     val weight: Int = 0,
     val user_email: String = "",
     val pond_name: String = "",
-    val date: String = ""
+    val date: String = "",
+    val manual_feeding: Boolean = false // New field for manual feeding tag
 )
 
 @Composable
@@ -79,8 +80,11 @@ fun ScheduleCard(schedule: CompletedSchedule) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = "Time: ${schedule.time}")
             Text(text = "Weight: ${schedule.weight} kg")
-            Text(text = "User: ${schedule.user_email}")
+            Text(text = "Type of feeding: ${schedule.user_email}")
             Text(text = "Date: ${schedule.date}")
+            if (schedule.manual_feeding) {
+                Text(text = "Tag: Manual Feeding", color = Color.Red)
+            }
         }
     }
 }
