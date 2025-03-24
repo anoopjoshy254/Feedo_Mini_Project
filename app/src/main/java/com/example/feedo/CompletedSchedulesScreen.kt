@@ -22,7 +22,7 @@ import java.io.IOException
 // Data model for a completed schedule (as saved in past_schedules)
 data class CompletedSchedule(
     val time: String = "",
-    val weight: Int = 0,
+    val weight: Double = 0.0, // Changed to Double for decimal values
     val user_email: String = "",
     val pond_name: String = "",
     val date: String = "",
@@ -79,7 +79,7 @@ fun ScheduleCard(schedule: CompletedSchedule) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(text = "Time: ${schedule.time}")
-            Text(text = "Weight: ${schedule.weight} kg")
+            Text(text = "Weight: %.2f kg".format(schedule.weight)) // Display weight as a decimal
             Text(text = "Type of feeding: ${schedule.user_email}")
             Text(text = "Date: ${schedule.date}")
             if (schedule.manual_feeding) {

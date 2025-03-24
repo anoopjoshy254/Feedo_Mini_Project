@@ -321,10 +321,10 @@ private fun sendManualFeedingData(pondId: String, weightFed: Float, timeElapsed:
     val body = """
         {
             "pond_name": "$pondId",
-            "weight_fed": ${weightFed.toInt()},
+            "weight_fed": $weightFed,
             "time_elapsed": $timeElapsed
         }
-    """.trimIndent().toRequestBody(mediaType)
+    """.trimIndent().toRequestBody(mediaType) // Ensure proper JSON formatting
 
     val request = Request.Builder()
         .url("https://f43jd2nv-5000.asse.devtunnels.ms/manual_feeding")

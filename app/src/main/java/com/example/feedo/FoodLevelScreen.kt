@@ -19,14 +19,14 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 
 @Composable
 fun FoodLevelScreen(navController: NavHostController, pondId: String) {
-    var foodLevel by remember { mutableStateOf(50) } // Start with a full food level (50kg)
+    var foodLevel by remember { mutableStateOf(50.0) } // Use Double instead of Int
     var loading by remember { mutableStateOf(true) }
 
     LaunchedEffect(pondId) {
         withContext(Dispatchers.IO) {
             // Fetch the total weight fed to the pond from the feeding history
             fetchTotalWeightFed(pondId) { totalWeightFed ->
-                foodLevel = (50 - totalWeightFed).coerceAtLeast(0) // Ensure food level doesn't go below 0
+                foodLevel = (50.0 - totalWeightFed).coerceAtLeast(0.0) // Ensure food level doesn't go below 0
                 loading = false
             }
         }
@@ -48,7 +48,7 @@ fun FoodLevelScreen(navController: NavHostController, pondId: String) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text(text = "Available Food: $foodLevel kg", style = MaterialTheme.typography.h6)
+                Text(text = "Available Food: %.2f kg".format(foodLevel), style = MaterialTheme.typography.h6)
                 Spacer(modifier = Modifier.height(16.dp))
                 Box(
                     modifier = Modifier
@@ -64,7 +64,7 @@ fun FoodLevelScreen(navController: NavHostController, pondId: String) {
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(foodLevel / 50f) // Scale to percentage of 50kg
+                            .fillMaxWidth((foodLevel / 50.0).toFloat()) // Scale to percentage of 50kg
                             .background(barColor, shape = RoundedCornerShape(8.dp))
                     )
                 }
@@ -86,26 +86,26 @@ fun FoodLevelScreen(navController: NavHostController, pondId: String) {
     }
 }
 
-fun fetchTotalWeightFed(pondId: String, callback: (Int) -> Unit) {
+fun fetchTotalWeightFed(pondId: String, callback: (Double) -> Unit) {
     val client = OkHttpClient()
     val request = Request.Builder()
         .url("https://f43jd2nv-5000.asse.devtunnels.ms/feeding-history?mail=${emailStr.value}") // Replace with your actual backend URL
         .build()
     client.newCall(request).enqueue(object : Callback {
         override fun onFailure(call: Call, e: IOException) {
-            callback(0)
+            callback(0.0)
         }
         override fun onResponse(call: Call, response: Response) {
             response.body?.string()?.let { body ->
                 val feedingHistory = Gson().fromJson(body, Array<CompletedSchedule>::class.java).toList()
                 val totalWeight = feedingHistory.filter { it.pond_name == pondId }.sumOf { it.weight }
                 callback(totalWeight)
-            } ?: callback(0)
+            } ?: callback(0.0)
         }
     })
 }
 
-fun updateFoodLevel(pondId: String, foodLevel: Int, callback: (Boolean) -> Unit) {
+fun updateFoodLevel(pondId: String, foodLevel: Double, callback: (Boolean) -> Unit) {
     val client = OkHttpClient()
     val mediaType = "application/json".toMediaTypeOrNull()
     val body = RequestBody.create(mediaType, "{ \"pond_name\": \"$pondId\", \"food_level\": $foodLevel }")
